@@ -1,0 +1,11 @@
+.tools/
+**/bin/
+**/obj/
+.vs/
+*.user
+*.suo
+*.log
+*.dmp
+.env
+.env.*
+TestResults/
