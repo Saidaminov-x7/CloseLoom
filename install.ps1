@@ -14,7 +14,7 @@ $releaseApi = 'https://api.github.com/repos/Saidaminov-x7/CloseLoom/releases?per
 function Get-PayloadRoot {
     param([string]$Root)
     if (Test-Path -LiteralPath (Join-Path $Root $appExe)) { return $Root }
-    foreach ($candidate in @((Join-Path $Root 'app'), (Join-Path $Root 'artifacts/CloseLoom-win-x64'))) {
+    foreach ($candidate in @((Join-Path $Root 'app'))) {
         if (Test-Path -LiteralPath (Join-Path $candidate $appExe)) { return $candidate }
     }
     return $null
