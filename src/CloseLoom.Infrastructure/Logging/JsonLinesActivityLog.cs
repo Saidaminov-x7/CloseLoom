@@ -2,6 +2,7 @@ using System.Text.Json;
 using System.Text;
 using CloseLoom.Core.Interfaces;
 using CloseLoom.Core.Models;
+using CloseLoom.Infrastructure.Persistence;
 
 namespace CloseLoom.Infrastructure.Logging;
 
@@ -9,7 +10,7 @@ namespace CloseLoom.Infrastructure.Logging;
 public sealed class JsonLinesActivityLog(string? filePath = null, long maxBytes = 5 * 1024 * 1024) : IActivityLog
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
-    private readonly string _filePath = filePath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CloseLoom", "activity.jsonl");
+    private readonly string _filePath = filePath ?? CloseLoomDataPaths.GetPath("activity.jsonl");
     private readonly SemaphoreSlim _gate = new(1, 1);
     private long _maxBytes = Math.Clamp(maxBytes, 64 * 1024, 100 * 1024 * 1024);
 

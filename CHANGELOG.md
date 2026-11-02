@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Documented per-user Windows 11 x64 install, sign-in startup, tray/session limits, uninstall, and retained Dry Run behavior in English and Russian.
+- Added release-archive install/uninstall guidance, including the self-contained runtime and official-source download boundary.
 - Added Windows event and process monitoring integration, lifecycle controls, and fail-closed handling for uncertain observation.
 - Expanded isolated tests and protected the activity log export and size limit.
 - Connected application settings, activity, logging and tray controls to services.

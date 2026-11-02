@@ -1,0 +1,10 @@
+@echo off
+setlocal
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0install.ps1" %*
+if errorlevel 1 (
+  echo CloseLoom installation failed. See the message above.
+  pause
+  exit /b 1
+)
+echo CloseLoom installation completed.
+pause

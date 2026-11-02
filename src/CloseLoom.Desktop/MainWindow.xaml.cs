@@ -85,9 +85,21 @@ public partial class MainWindow : Window
         catch (Exception) { MessageBox.Show(L("CloseLoom could not load the approved application list. No applications will be monitored.", "Не удалось загрузить список разрешённых приложений. Наблюдение за программами не начнётся."), "CloseLoom", MessageBoxButton.OK, MessageBoxImage.Warning); }
         try { _activityLog.MaxBytes = _settings.MaxLogBytes; _activityEvents = await _activityLog.ReadAsync(); }
         catch (Exception) { _activityEvents = []; MessageBox.Show(L("CloseLoom could not read its activity log.", "Не удалось прочитать журнал событий."), "CloseLoom", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        if (_settings.AutoMonitorOnLaunch && HasEnabledApplications())
+        {
+            try { await _monitor.StartAsync(); }
+            catch (Exception) { MessageBox.Show(L("Automatic monitoring could not start. You can retry from the dashboard.", "Не удалось автоматически запустить мониторинг. Повторите запуск на панели обзора."), "CloseLoom", MessageBoxButton.OK, MessageBoxImage.Warning); }
+        }
         ShowDashboard();
+        if (App.StartInBackground)
+        {
+            Hide();
+            ShowInTaskbar = false;
+            Opacity = 1;
+        }
     }
     private async Task ReloadApplications() { _applications.Clear(); _applications.AddRange(await _applicationStore.ListAsync()); }
+    private bool HasEnabledApplications() => _applications.Any(application => application.Enabled && !application.IsProtected);
     private async Task ChangeMonitoringAsync(Func<ValueTask> action)
     {
         try { await action(); await RefreshActivityAsync(); ShowDashboard(); }
@@ -114,7 +126,7 @@ public partial class MainWindow : Window
     {
         DisposeTray();
         _trayMenu = new System.Windows.Forms.ContextMenuStrip();
-        _trayMenu.Items.Add(_settings.Language == "ru" ? "Открыть CloseLoom" : "Open CloseLoom", null, (_, _) => Dispatcher.Invoke(() => { Show(); WindowState = WindowState.Normal; Activate(); }));
+        _trayMenu.Items.Add(_settings.Language == "ru" ? "Открыть CloseLoom" : "Open CloseLoom", null, (_, _) => Dispatcher.Invoke(ShowFromTray));
         _trayMenu.Items.Add(_settings.Language == "ru" ? "Начать мониторинг" : "Start Monitoring", null, async (_, _) => await Dispatcher.InvokeAsync(async () => await ChangeMonitoringAsync(() => _monitor.StartAsync())));
         _trayMenu.Items.Add(_settings.Language == "ru" ? "Остановить мониторинг" : "Stop Monitoring", null, async (_, _) => await Dispatcher.InvokeAsync(async () => await ChangeMonitoringAsync(() => _monitor.StopAsync())));
         _trayMenu.Items.Add(_settings.Language == "ru" ? "Приостановить / продолжить" : "Pause / Resume Monitoring", null, async (_, _) => await Dispatcher.InvokeAsync(async () => await ChangeMonitoringAsync(() => _monitor.Status.IsPaused ? _monitor.ResumeAsync() : _monitor.PauseAsync())));
@@ -132,7 +144,7 @@ public partial class MainWindow : Window
             _ownedTrayIcon = (System.Drawing.Icon)loaded.Clone();
         }
         _trayIcon = new System.Windows.Forms.NotifyIcon { Icon = _ownedTrayIcon ?? System.Drawing.SystemIcons.Application, Text = "CloseLoom", ContextMenuStrip = _trayMenu, Visible = true };
-        _trayIcon.DoubleClick += (_, _) => Dispatcher.Invoke(() => { Show(); WindowState = WindowState.Normal; Activate(); });
+        _trayIcon.DoubleClick += (_, _) => Dispatcher.Invoke(ShowFromTray);
     }
     private void DisposeTray()
     {
@@ -142,10 +154,15 @@ public partial class MainWindow : Window
     }
     private void ShowRecentActivityFromTray()
     {
+        ShowFromTray();
+        ShowActivity();
+    }
+    internal void ShowFromTray()
+    {
+        ShowInTaskbar = true;
         Show();
         WindowState = WindowState.Normal;
         Activate();
-        ShowActivity();
     }
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
@@ -365,6 +382,8 @@ public partial class MainWindow : Window
         panel.Children.Add(grace);
         var notifications = new CheckBox { Content = L("Show notifications", "Показывать уведомления"), IsChecked = _settings.NotificationsEnabled, Foreground = ThemeForeground, Margin = new Thickness(0, 6, 0, 6) };
         panel.Children.Add(notifications);
+        var autoMonitor = new CheckBox { Content = L("Start monitoring automatically when CloseLoom launches", "Запускать мониторинг автоматически при запуске CloseLoom"), IsChecked = _settings.AutoMonitorOnLaunch, Foreground = ThemeForeground, Margin = new Thickness(0, 6, 0, 6), ToolTip = L("Monitoring starts only when at least one approved application is enabled.", "Мониторинг запускается, только если включено хотя бы одно разрешённое приложение.") };
+        panel.Children.Add(autoMonitor);
         panel.Children.Add(Text(L("Protected applications", "Защищённые приложения"), 18, true));
         panel.Children.Add(Text(L("These executable paths are excluded from termination decisions.", "Эти исполняемые файлы исключены из решений о завершении."), 12, false, "#A3ACB9"));
         foreach (var protectedPath in _settings.ProtectedExecutablePaths)
@@ -392,7 +411,7 @@ public partial class MainWindow : Window
                 MessageBox.Show(L("Grace period must be 3–300 seconds and log size 1–100 MiB.", "Задержка должна быть 3–300 секунд, размер журнала — 1–100 МиБ."), "CloseLoom", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            var updated = _settings with { DryRun = true, Theme = theme.SelectedIndex == 1 ? "light" : "dark", Language = language.SelectedIndex == 1 ? "ru" : "en", GracePeriodSeconds = seconds, NotificationsEnabled = notifications.IsChecked == true, MaxLogBytes = (long)logMiB * 1024 * 1024, CloseBehavior = closeBehavior.SelectedIndex == 1 ? "tray" : closeBehavior.SelectedIndex == 2 ? "exit" : "ask" };
+            var updated = _settings with { DryRun = true, Theme = theme.SelectedIndex == 1 ? "light" : "dark", Language = language.SelectedIndex == 1 ? "ru" : "en", GracePeriodSeconds = seconds, NotificationsEnabled = notifications.IsChecked == true, AutoMonitorOnLaunch = autoMonitor.IsChecked == true, MaxLogBytes = (long)logMiB * 1024 * 1024, CloseBehavior = closeBehavior.SelectedIndex == 1 ? "tray" : closeBehavior.SelectedIndex == 2 ? "exit" : "ask" };
             await SaveSettingsMutationAsync(updated, refreshSettingsPage: true);
         };
         panel.Children.Add(save);

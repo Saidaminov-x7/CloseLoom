@@ -8,7 +8,7 @@ namespace CloseLoom.Infrastructure.Persistence;
 public sealed class JsonApplicationAllowlist(string? filePath = null) : IApplicationStore, IAllowlist
 {
     private static readonly JsonSerializerOptions Options = new() { WriteIndented = true, PropertyNameCaseInsensitive = true };
-    private readonly string _filePath = filePath ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "CloseLoom", "applications.json");
+    private readonly string _filePath = filePath ?? CloseLoomDataPaths.GetPath("applications.json");
     private readonly SemaphoreSlim _gate = new(1, 1);
 
     public async ValueTask<IReadOnlyList<MonitoredApplication>> ListAsync(CancellationToken cancellationToken = default)

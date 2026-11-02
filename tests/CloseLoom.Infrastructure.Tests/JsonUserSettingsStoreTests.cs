@@ -13,6 +13,7 @@ public sealed class JsonUserSettingsStoreTests : IDisposable
     {
         var result = await new JsonUserSettingsStore(FilePath).LoadAsync();
         Assert.True(result.DryRun);
+        Assert.True(result.AutoMonitorOnLaunch);
         Assert.Equal(3, result.GracePeriodSeconds);
     }
 
@@ -20,9 +21,10 @@ public sealed class JsonUserSettingsStoreTests : IDisposable
     public async Task SettingsRoundTripAndClampUnsafeValues()
     {
         var store = new JsonUserSettingsStore(FilePath);
-        await store.SaveAsync(new UserSettings { DryRun = false, GracePeriodSeconds = 0, Theme = "bad", Language = "ru" });
+        await store.SaveAsync(new UserSettings { DryRun = false, AutoMonitorOnLaunch = false, GracePeriodSeconds = 0, Theme = "bad", Language = "ru" });
         var loaded = await store.LoadAsync();
         Assert.False(loaded.DryRun);
+        Assert.False(loaded.AutoMonitorOnLaunch);
         Assert.Equal(3, loaded.GracePeriodSeconds);
         Assert.Equal("dark", loaded.Theme);
         Assert.Equal("ru", loaded.Language);
