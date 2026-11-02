@@ -1,5 +1,5 @@
 # Architecture
 
-Core defines process identity, a termination decision policy, and interfaces for process, window, allowlist and activity access. Infrastructure provides Windows adapters and JSON persistence. Desktop is a WPF shell using dependency injection. Tests exercise policy and storage without terminating real processes.
+Core owns process identities, the decision policy and per-instance grace-period state. Infrastructure supplies process and window adapters, a bounded event queue, periodic reconciliation and JSON persistence. Desktop composes these services using dependency injection. Only a selected executable's exact full path is considered; process identity includes PID and creation time. The monitor handles hook faults by cancelling pending work. Grace-period and monitoring tests use fake time and fake adapters.
 
-A grace-period coordinator is implemented and unit-tested with virtual time; the event-driven monitoring and end-to-end connections are incomplete. In particular, a policy decision is not a substitute for tracking every state change throughout a grace period. The UI must not expose active termination until the complete pipeline and protection rules have been reviewed and tested.
+Dry Run is forced by the monitoring service. The native termination adapter refuses requests. The pipeline has not been validated with real process or window events, and the delivery and ordering guarantees of Windows events do not by themselves prove uninterrupted observation. These components are not evidence of production safety.

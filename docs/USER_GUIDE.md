@@ -1,5 +1,7 @@
 # User guide
 
-This is an incomplete development version. The desktop shell is not a working process monitor. Monitor controls and active termination are unavailable. Dry Run is the default in settings. An allowlist entry alone does not grant permission to terminate a process.
+This is a development build. Only Dry Run is available, and the real monitoring interface and tray have not been tested. Before future use, review the security limitations and make a backup of important work.
 
-Once the product is complete and independently verified, start it manually, select only applications for which background termination is acceptable, and inspect activity in Dry Run before considering active operation. Forced termination can lose unsaved work; closing the last visible window does not prove the application has finished saving.
+To use after separate authorization and validation: start AppGuard manually, add the exact executable, review its background-work consent and delay, and start monitoring. The activity and log views are intended to show recorded events; export can contain sensitive application names and identifiers. Stop monitoring before exit, or use the explicit close-to-tray preference if continued observation is intended.
+
+Closing the last window does not mean data has been saved. Real termination is disabled in this build.

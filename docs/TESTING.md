@@ -1,5 +1,5 @@
 # Testing
 
-Run `dotnet restore AppGuard.sln`, `dotnet build AppGuard.sln --configuration Release`, and `dotnet test AppGuard.sln --configuration Release`. Unit tests use fake process dependencies and temporary settings files; they do not exercise actual process termination or validate a running application. CI runs on Windows and does not launch the desktop app.
+Use the restore, Release build, test and format commands in the README. Unit tests use fake process catalogs, window sources and clocks, or temporary JSON files. They do not start AppGuard, install WinEvent hooks, observe real processes or terminate them. A passing unit test is not evidence of actual Windows behavior.
 
-UI behavior, real process and window monitoring, tray behavior, and end-to-end safety remain NOT TESTED. Passing isolated tests does not establish those behaviors.
+UI, tray interactions, live window events, actual process observation and termination remain NOT TESTED. GitHub Actions runs these safe checks on Windows; a local run of equivalent commands does not prove a remote workflow has executed.

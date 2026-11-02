@@ -1,41 +1,42 @@
 # AppGuard
 
-AppGuard is a work-in-progress Windows 11 desktop project intended to help users observe explicitly selected applications and handle lingering processes after windows close. **Monitoring and active termination are not available in this revision.** Do not rely on it to manage processes or protect data.
+AppGuard is a Windows 11 WPF application under development for observing applications explicitly selected by the user. It is designed to notice the disappearance of an observed user window and recheck a process after a grace period. **Only Dry Run is available. Active termination is deliberately disabled.**
 
-## Status
+## Current status
 
-The repository contains a WPF shell, a safety decision policy, Windows process/window adapters, settings and activity storage, and isolated unit tests. The desktop shell and these components are not yet a complete monitoring application. No screenshots or performance claims are provided.
+The code includes process discovery for the current session, Windows window-event hooks with bounded reconciliation, per-instance grace-period coordination, an allowlist, local JSON settings and activity log, and a desktop interface with tray controls. The monitoring implementation has not been exercised against Windows processes, and the UI and tray have not been launched or visually tested. Unit tests use fakes and do not establish end-to-end behavior. Do not rely on this development version to protect data or manage processes.
 
-## Safety
+The interface provides application selection and per-application settings, dashboard, activity and log views, search and export, theme and language settings, and monitoring controls. Feature behavior and translations require actual UI verification. Some dynamic event reasons remain in English in Russian mode, and the navigation sidebar remains dark in light theme.
 
-Dry Run is the default setting. The Windows termination adapter currently refuses termination; no automatic process termination is available. Closing an application window does not establish that data has been saved. Forced termination can cause permanent loss of unsaved data. Windows services, security software, other sessions and ambiguous identities require special protection. See [SECURITY.md](docs/SECURITY.md).
+## Safety and privacy
+
+Dry Run is enforced, including when an older settings file requests Active mode. The Windows termination adapter refuses all termination requests. A future Active mode would require explicit user consent and a reviewed means of proving process identity, window state, session membership and protection status. There is currently no reliable classification of every third-party security product. Closing a window does not establish that application data has been saved: forced termination may permanently lose unsaved data.
+
+Application names, paths and process identifiers may be sensitive. Settings and activity logs are stored locally under the user's local application data directory. The log does not intentionally record window contents. Review exported logs before sharing. See [security](docs/SECURITY.md).
 
 ## Requirements and build
 
-Windows 11, .NET 10 SDK, and network access for NuGet restore are required. From the repository root:
+Windows 11, .NET 10 SDK, and access to NuGet for restore are required:
 
 ```powershell
 dotnet restore AppGuard.sln
-dotnet build AppGuard.sln --configuration Release
-dotnet test AppGuard.sln --configuration Release
+dotnet build AppGuard.sln --configuration Release --no-restore -warnaserror
+dotnet test AppGuard.sln --configuration Release --no-build
+dotnet format AppGuard.sln --verify-no-changes --no-restore
 ```
 
-The desktop application can eventually be started manually with `dotnet run --project src/AppGuard.Desktop` after reviewing the limitations. It has not been launched during this development task, and its UI and real process behavior have not been verified.
+For future manual use, after reviewing the limitations, run `dotnet run --project src/AppGuard.Desktop`. AppGuard has not been launched as part of this development task. No installer, service, autostart entry or scheduled task is created by this repository.
 
-## Architecture
+## Architecture and documentation
 
-- `src/AppGuard.Core`: models, interfaces, and fail-closed decision policy.
-- `src/AppGuard.Infrastructure`: Windows adapters and JSON storage.
-- `src/AppGuard.Desktop`: WPF user interface.
-- `tests`: isolated tests with fakes; these do not validate real monitoring.
-- `docs`: architecture, safety, testing and user guide.
+- `src/AppGuard.Core` — identities, decision policy and grace-period state.
+- `src/AppGuard.Infrastructure` — Windows adapters, event observation, and JSON persistence.
+- `src/AppGuard.Desktop` — WPF user interface and dependency injection.
+- `tests` — unit tests using fake process and window dependencies.
+- `docs` — [architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), [testing](docs/TESTING.md), and [user guide](docs/USER_GUIDE.md).
 
-See [architecture](docs/ARCHITECTURE.md), [testing](docs/TESTING.md), and [user guide](docs/USER_GUIDE.md). Russian overview: [README.ru.md](README.ru.md).
+A Russian overview is available in [README.ru.md](README.ru.md). See [CHANGELOG.md](CHANGELOG.md) for changes. There are no fabricated screenshots or performance measurements.
 
 ## Next steps
 
-Connect the grace-period coordinator to event-driven process and window monitoring; complete the tray, localization, settings, and activity interface; independently review process protection; run authorized integration and UI tests. No installer or release is provided.
-
-## License
-
-[MIT](LICENSE).
+Review and test the Windows adapters and complete the UI under explicit authorization; resolve the remaining process-protection and event-delivery safety questions before considering Active mode. [MIT license](LICENSE).
