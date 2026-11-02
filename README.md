@@ -4,7 +4,7 @@ AppGuard is a Windows 11 WPF application under development for observing applica
 
 ## Current status
 
-The code includes process discovery for the current session, Windows window-event hooks with bounded reconciliation, per-instance grace-period coordination, an allowlist, local JSON settings and activity log, and a desktop interface with tray controls. The monitoring implementation has not been exercised against Windows processes, and the UI and tray have not been launched or visually tested. Unit tests use fakes and do not establish end-to-end behavior. Do not rely on this development version to protect data or manage processes.
+The code includes process discovery for the current session, Windows window-event hooks with bounded reconciliation, per-instance grace-period coordination, an allowlist, local JSON settings and activity log, and a desktop interface with tray controls. On 2026-11-02 the monitor was exercised with real WinEvent hooks and an isolated disposable WinForms fixture in Dry Run (38/38 live integration checks passed). The WPF shell, five navigation pages, monitoring Start/Stop controls and confirmation-based exit were tested. Tray-menu interaction and forced termination remain untested. Unit tests alone do not establish safety. Do not rely on this development version to protect data or manage processes.
 
 The interface provides application selection and per-application settings, dashboard, activity and log views, search and export, theme and language settings, and monitoring controls. Feature behavior and translations require actual UI verification. Some dynamic event reasons remain in English in Russian mode, and the navigation sidebar remains dark in light theme.
 
@@ -25,7 +25,7 @@ dotnet test AppGuard.sln --configuration Release --no-build
 dotnet format AppGuard.sln --verify-no-changes --no-restore
 ```
 
-For future manual use, after reviewing the limitations, run `dotnet run --project src/AppGuard.Desktop`. AppGuard has not been launched as part of this development task. No installer, service, autostart entry or scheduled task is created by this repository.
+For future manual use, after reviewing the limitations, run `dotnet run --project src/AppGuard.Desktop`. The WPF application was launched temporarily for authorized UI tests and exited; no installation or autostart was configured. No installer, service, autostart entry or scheduled task is created by this repository.
 
 ## Architecture and documentation
 
@@ -40,3 +40,7 @@ A Russian overview is available in [README.ru.md](README.ru.md). See [CHANGELOG.
 ## Next steps
 
 Review and test the Windows adapters and complete the UI under explicit authorization; resolve the remaining process-protection and event-delivery safety questions before considering Active mode. [MIT license](LICENSE).
+
+## Verification on 2026-11-02
+
+Release build: PASS (0 errors, 0 warnings). Unit tests: **63/63 PASS**. Isolated live Windows integration: **38/38 PASS** (including one-shot decision stability). WPF: five navigation controls, monitoring start/stop, and confirmation-based exit PASS. See [the real Windows test report](docs/REAL_WINDOWS_TEST_REPORT_2026-11-02.md) and [repeatable live test sources](tests/live-windows/README.md). Real forced termination, tray menu actions and remote GitHub Actions are NOT TESTED.

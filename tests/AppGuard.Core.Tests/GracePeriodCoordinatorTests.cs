@@ -31,6 +31,51 @@ public sealed class GracePeriodCoordinatorTests
     }
 
     [Fact]
+    public async Task StableClosedWindowRunsDecisionOnlyOnceAcrossRepeatedReconciliations()
+    {
+        var fixture = new Fixture();
+        await fixture.StartAsync();
+        var id = Identity(136);
+        await fixture.TrackAsync(id, [MainWindow(id.Pid, 1)]);
+        await fixture.Coordinator.ObserveWindowsAsync(id, []);
+        fixture.Time.Advance(TimeSpan.FromSeconds(3));
+        await fixture.Termination.WaitForCallAsync();
+
+        for (var scan = 0; scan < 8; scan++)
+        {
+            // Windows can report transient invisible/owned window changes after the main window closes.
+            await fixture.Coordinator.ObserveWindowsAsync(id, [], stateChangedDuringGrace: scan % 2 == 0);
+            fixture.Time.Advance(TimeSpan.FromSeconds(3));
+        }
+
+        Assert.Single(fixture.Termination.Calls);
+    }
+
+    [Fact]
+    public async Task ReopeningWindowAfterCompletedDecisionAllowsOneNewDecision()
+    {
+        var fixture = new Fixture();
+        await fixture.StartAsync();
+        var id = Identity(137);
+        await fixture.TrackAsync(id, [MainWindow(id.Pid, 1)]);
+        await fixture.Coordinator.ObserveWindowsAsync(id, []);
+        fixture.Time.Advance(TimeSpan.FromSeconds(3));
+        await fixture.Termination.WaitForCallAsync();
+        Assert.Single(fixture.Termination.Calls);
+
+        await fixture.Coordinator.ObserveWindowsAsync(id, [MainWindow(id.Pid, 2)]);
+        await fixture.Coordinator.ObserveWindowsAsync(id, []);
+        fixture.Time.Advance(TimeSpan.FromSeconds(3));
+        await fixture.Termination.WaitForCountAsync(2);
+        Assert.Equal(2, fixture.Termination.Calls.Count);
+
+        await fixture.Coordinator.ObserveWindowsAsync(id, []);
+        fixture.Time.Advance(TimeSpan.FromSeconds(30));
+        await Task.Yield();
+        Assert.Equal(2, fixture.Termination.Calls.Count);
+    }
+
+    [Fact]
     public async Task SecondOpenWindowPreventsStartingGracePeriod()
     {
         var fixture = new Fixture();
@@ -293,6 +338,12 @@ public sealed class GracePeriodCoordinatorTests
             return TerminationDecision.Permit();
         }
         public Task WaitForCallAsync() => _called.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        public async Task WaitForCountAsync(int count)
+        {
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(2));
+            while (Calls.Count < count)
+                await Task.Delay(10, cts.Token);
+        }
         public void BlockCompletion() => _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public void ReleaseCompletion() => _completion?.TrySetResult();
     }

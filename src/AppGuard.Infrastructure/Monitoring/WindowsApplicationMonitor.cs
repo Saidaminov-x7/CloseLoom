@@ -370,10 +370,16 @@ public sealed class WindowsApplicationMonitor : IApplicationMonitor
                 await _coordinator.ProcessExitedAsync(pair.Value, cancellationToken).ConfigureAwait(false);
                 _tracked.TryRemove(pair.Key, out _);
             }
+            else if (IsProcessConfirmedAbsent(pair.Key))
+            {
+                // A vanished PID can be confirmed independently of OpenProcess. Inaccessibility alone is NOT
+                // evidence of exit, and a reused PID is handled above when its identity can be verified.
+                await _coordinator.ProcessExitedAsync(pair.Value, cancellationToken).ConfigureAwait(false);
+                _tracked.TryRemove(pair.Key, out _);
+            }
             else
             {
-                // Missing/inaccessible PID is unknown, not proof of exit. Cancel any pending action and wait for a
-                // fresh verified observation before allowing the coordinator to consider another grace period.
+                // An inaccessible-but-existing process is unknown, not proof of exit.
                 await _coordinator.ReportProcessObservationUnreliableAsync(pair.Value, cancellationToken).ConfigureAwait(false);
             }
         }
@@ -462,6 +468,25 @@ public sealed class WindowsApplicationMonitor : IApplicationMonitor
         _tickTask = null;
         _signals = null;
         _tracked.Clear();
+    }
+
+    private static bool IsProcessConfirmedAbsent(int pid)
+    {
+        try
+        {
+            using var process = System.Diagnostics.Process.GetProcessById(pid);
+            return process.HasExited;
+        }
+        catch (ArgumentException)
+        {
+            // GetProcessById only throws ArgumentException for an ID that is not currently present.
+            return true;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            // Access denied or an inconclusive query MUST NOT be treated as an exit.
+            return false;
+        }
     }
 
     private static bool PathEquals(string left, string right)

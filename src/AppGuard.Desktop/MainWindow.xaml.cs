@@ -137,9 +137,10 @@ public partial class MainWindow : Window
         Activate();
         ShowActivity();
     }
-    private async void Window_Closing(object? sender, CancelEventArgs e)
+    private void Window_Closing(object? sender, CancelEventArgs e)
     {
         if (_allowClose) return;
+        if (_exitInProgress) { e.Cancel = true; return; }
         if (_settings.CloseBehavior == "tray")
         {
             e.Cancel = true; Hide();
@@ -149,7 +150,9 @@ public partial class MainWindow : Window
         if (_settings.CloseBehavior == "ask" && MessageBox.Show(L("Close AppGuard completely? Choose No to keep it open.", "Полностью закрыть AppGuard? Выберите «Нет», чтобы оставить его открытым."), "AppGuard", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
         { e.Cancel = true; return; }
         e.Cancel = true;
-        await ExitAppAsync();
+        // WPF forbids calling Close() reentrantly while this Closing event is being processed.
+        // Defer shutdown until the current event handler has fully returned.
+        Dispatcher.BeginInvoke(new Action(async () => await ExitAppAsync()));
     }
     private async Task ExitAppAsync()
     {

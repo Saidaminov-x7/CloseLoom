@@ -196,6 +196,9 @@ public sealed class GracePeriodCoordinator : IAsyncDisposable
                 tracked.GraceCancellation = null;
                 tracked.GraceTask = null;
                 tracked.Generation++;
+                // Once a decision was evaluated, background-only window events must not create
+                // repeated decisions. Only a freshly observed eligible main window arms a new cycle.
+                if (HasVisibleMainWindow(windows)) tracked.GraceDecisionAttemptedForState = false;
                 opened = cancelled is not null && HasVisibleMainWindow(windows);
             }
             tracked.LastWindowSignature = newSignature;
@@ -203,7 +206,8 @@ public sealed class GracePeriodCoordinator : IAsyncDisposable
             tracked.ProcessObservationReliable = true; // Caller supplied a fresh verified process snapshot.
             tracked.HadEligibleWindow |= HasVisibleMainWindow(windows);
             schedule = observationReliable && tracked.ProcessObservationReliable && tracked.HadEligibleWindow &&
-                !HasVisibleMainWindow(windows) && tracked.GraceCancellation is null;
+                !HasVisibleMainWindow(windows) && tracked.GraceCancellation is null &&
+                !tracked.GraceDecisionAttemptedForState;
             if (schedule)
             {
                 tracked.GraceCancellation = new CancellationTokenSource();
@@ -326,6 +330,9 @@ public sealed class GracePeriodCoordinator : IAsyncDisposable
             {
                 if (!_monitoring || !_tracked.TryGetValue(identity, out current) || current.Generation != generation ||
                     !ReferenceEquals(current.GraceCancellation, tokenSource) || HasVisibleMainWindow(current.LastWindows)) return;
+                // Exactly one decision is evaluated for each stable window state. Without this latch,
+                // the reconciliation scan repeatedly restarts the delay after a Dry Run result.
+                current.GraceDecisionAttemptedForState = true;
             }
             // The safety service owns the single decision/result event. In particular, do not infer that a
             // termination request completed merely because this coordinator's call returned.
@@ -387,6 +394,7 @@ public sealed class GracePeriodCoordinator : IAsyncDisposable
         public ProcessIdentity Identity { get; } = identity;
         public TerminationOptions Options { get; } = options;
         public bool HadEligibleWindow { get; set; }
+        public bool GraceDecisionAttemptedForState { get; set; }
         public bool ProcessObservationReliable { get; set; } = true;
         public bool WindowObservationReliable { get; set; } = true;
         public string? LastWindowSignature { get; set; }

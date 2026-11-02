@@ -16,6 +16,9 @@ public sealed class WindowsWindowEventSource : IWindowEventSource
     private const uint WmQuit = 0x0012;
     private static readonly ConcurrentDictionary<IntPtr, WinEventProc> FailedUnhookDelegates = new();
 
+    // A valid SHOW/HIDE event records HWND ownership so DESTROY remains attributable even after Windows
+    // invalidates its handle. Unknown owners still fault closed instead of guessing a PID.
+    private readonly ConcurrentDictionary<IntPtr, int> _knownWindowOwners = new();
     private readonly object _gate = new();
     private readonly ManualResetEventSlim _initialized = new();
     private readonly List<IntPtr> _hooks = [];
@@ -36,6 +39,7 @@ public sealed class WindowsWindowEventSource : IWindowEventSource
             ObjectDisposedException.ThrowIf(_disposed, this);
             if (_poisoned || _hooks.Count != 0) throw new InvalidOperationException("A previous Windows event hook could not be confirmed removed; this source cannot be restarted.");
             if (_thread is not null) throw new InvalidOperationException("Window event source is already running.");
+            _knownWindowOwners.Clear();
             _onWindowChanged = onWindowChanged;
             _onError = onError;
             _initialized.Reset();
@@ -80,6 +84,7 @@ public sealed class WindowsWindowEventSource : IWindowEventSource
             _thread = null;
             if (_hooks.Count != 0) throw new InvalidOperationException("One or more Windows hooks could not be removed; callbacks remain rooted and monitoring must stay stopped.");
             _callback = null;
+            _knownWindowOwners.Clear();
         }
     }
 
@@ -144,7 +149,34 @@ public sealed class WindowsWindowEventSource : IWindowEventSource
         try
         {
             GetWindowThreadProcessId(hwnd, out var pid);
-            _onWindowChanged?.Invoke(pid > 0 ? checked((int)pid) : null);
+            if (pid > 0)
+            {
+                var ownerPid = checked((int)pid);
+                if (eventType == EventObjectDestroy)
+                    _knownWindowOwners.TryRemove(hwnd, out _);
+                else
+                    _knownWindowOwners[hwnd] = ownerPid;
+                _onWindowChanged?.Invoke(ownerPid);
+            }
+            else if (_knownWindowOwners.TryGetValue(hwnd, out var rememberedPid))
+            {
+                if (eventType == EventObjectDestroy)
+                    _knownWindowOwners.TryRemove(hwnd, out _);
+                _onWindowChanged?.Invoke(rememberedPid);
+            }
+            else if (eventType == EventObjectDestroy)
+            {
+                // Windows may invalidate the HWND before delivering DESTROY. If we never saw its owner,
+                // do not attribute this event to an allowlisted app or fault all monitoring because of an
+                // unrelated window. Reconciliation checks current windows every two seconds. Active
+                // termination remains unavailable; this is a best-effort dry-run observation only.
+                return;
+            }
+            else
+            {
+                // An unidentified SHOW/HIDE event makes window observation unreliable; fail closed.
+                _onWindowChanged?.Invoke(null);
+            }
         }
         catch (Exception ex) { ReportError(ex); }
     }
