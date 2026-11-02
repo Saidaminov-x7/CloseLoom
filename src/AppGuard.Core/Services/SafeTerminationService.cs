@@ -42,7 +42,7 @@ public sealed class SafeTerminationService(
             }
 
             await terminator.TerminateAsync(expected, cancellationToken).ConfigureAwait(false);
-            await Log(ActivityEventType.ProcessTerminated, "Termination requested").ConfigureAwait(false);
+            await Log(ActivityEventType.ProcessTerminated, "Process exit confirmed").ConfigureAwait(false);
             return TerminationDecision.Permit();
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)

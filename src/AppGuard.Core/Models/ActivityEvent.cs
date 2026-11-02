@@ -3,7 +3,7 @@ namespace AppGuard.Core.Models;
 public enum ActivityEventType
 {
     ProcessDetected, WindowOpened, WindowClosed, GracePeriodStarted,
-    GracePeriodCancelled, ProcessSkipped, ProcessTerminated, Error
+    GracePeriodCancelled, ProcessSkipped, TerminationRequested, ProcessTerminated, ProcessExited, Error
 }
 
 public sealed record ActivityEvent(DateTimeOffset TimestampUtc, string? ApplicationName,

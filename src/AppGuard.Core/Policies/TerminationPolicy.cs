@@ -25,8 +25,8 @@ public sealed class TerminationPolicy
             return TerminationDecision.Skip("Process is not proven to belong to the current user session.");
         if (windows is null) return TerminationDecision.Skip("Window state could not be verified.");
         if (windows.Any(IsEligibleWindow)) return TerminationDecision.Skip("A visible top-level window is still open.");
-        if (application.MayContinueInBackground && !application.AllowBackgroundTerminationConsent)
-            return TerminationDecision.Skip("Explicit consent is required for applications that may continue in the background.");
+        if (!options.DryRun && !application.AllowBackgroundTerminationConsent)
+            return TerminationDecision.Skip("Explicit per-application consent is required before any real termination.");
         return TerminationDecision.Permit();
     }
 

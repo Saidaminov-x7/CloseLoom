@@ -64,6 +64,75 @@ public sealed class GracePeriodCoordinatorTests
     }
 
     [Fact]
+    public async Task RawWindowStateChangeRestartsDelayEvenWhenSnapshotIsIdentical()
+    {
+        var fixture = new Fixture();
+        await fixture.StartAsync();
+        var id = Identity(130);
+        await fixture.TrackAsync(id, [MainWindow(id.Pid, 1)]);
+        await fixture.Coordinator.ObserveWindowsAsync(id, []);
+        fixture.Time.Advance(TimeSpan.FromSeconds(2));
+        await fixture.Coordinator.ObserveWindowsAsync(id, [], stateChangedDuringGrace: true);
+        fixture.Time.Advance(TimeSpan.FromSeconds(1));
+        Assert.Empty(fixture.Termination.Calls);
+        fixture.Time.Advance(TimeSpan.FromSeconds(2));
+        await fixture.Termination.WaitForCallAsync();
+        Assert.Single(fixture.Termination.Calls);
+    }
+
+    [Fact]
+    public async Task UnreliableWindowObservationCancelsUntilReliableSnapshotReturns()
+    {
+        var fixture = new Fixture();
+        await fixture.StartAsync();
+        var id = Identity(131);
+        await fixture.TrackAsync(id, [MainWindow(id.Pid, 1)]);
+        await fixture.Coordinator.ObserveWindowsAsync(id, []);
+        fixture.Time.Advance(TimeSpan.FromSeconds(2));
+        await fixture.Coordinator.ReportWindowObservationUnreliableAsync(id);
+        fixture.Time.Advance(TimeSpan.FromSeconds(10));
+        Assert.Empty(fixture.Termination.Calls);
+
+        await fixture.Coordinator.ObserveWindowsAsync(id, [], stateChangeObserved: false, observationReliable: true);
+        fixture.Time.Advance(TimeSpan.FromSeconds(3));
+        await fixture.Termination.WaitForCallAsync();
+        Assert.Single(fixture.Termination.Calls);
+    }
+
+    [Fact]
+    public async Task UnverifiableProcessCancelsGraceUntilIdentityRefresh()
+    {
+        var fixture = new Fixture();
+        await fixture.StartAsync();
+        var id = Identity(134);
+        await fixture.TrackAsync(id, [MainWindow(id.Pid, 1)]);
+        await fixture.Coordinator.ObserveWindowsAsync(id, []);
+        fixture.Time.Advance(TimeSpan.FromSeconds(2));
+        await fixture.Coordinator.ReportProcessObservationUnreliableAsync(id);
+        fixture.Time.Advance(TimeSpan.FromMinutes(1));
+        Assert.Empty(fixture.Termination.Calls);
+
+        await fixture.Coordinator.ObserveWindowsAsync(id, []); // Fresh verified identity/window snapshot recovers observation.
+        fixture.Time.Advance(TimeSpan.FromSeconds(3));
+        await fixture.Termination.WaitForCallAsync();
+        Assert.Single(fixture.Termination.Calls);
+    }
+
+    [Fact]
+    public async Task ForgettingAllowlistedProcessDoesNotInventExitEvent()
+    {
+        var fixture = new Fixture();
+        var events = new List<ActivityEvent>();
+        fixture.Coordinator.ActivityOccurred += (_, e) => events.Add(e);
+        await fixture.StartAsync();
+        var id = Identity(135);
+        await fixture.TrackAsync(id, [MainWindow(id.Pid, 1)]);
+        await fixture.Coordinator.ForgetProcessAsync(id);
+        Assert.DoesNotContain(events, e => e.Type == ActivityEventType.ProcessExited);
+        Assert.Equal(0, fixture.Coordinator.TrackedProcessCount);
+    }
+
+    [Fact]
     public async Task StopMonitoringCancelsPendingGracePeriod()
     {
         var fixture = new Fixture();
@@ -156,6 +225,44 @@ public sealed class GracePeriodCoordinatorTests
         await Assert.ThrowsAsync<ObjectDisposedException>(async () => await fixture.Coordinator.StartAsync());
     }
 
+    [Fact]
+    public async Task DisposeWaitsForActiveGraceTaskToFinish()
+    {
+        var fixture = new Fixture();
+        fixture.Termination.BlockCompletion();
+        await fixture.StartAsync();
+        var id = Identity(132);
+        await fixture.TrackAsync(id, [MainWindow(id.Pid, 1)]);
+        await fixture.Coordinator.ObserveWindowsAsync(id, []);
+        fixture.Time.Advance(TimeSpan.FromSeconds(3));
+        await fixture.Termination.WaitForCallAsync();
+        var dispose = fixture.Coordinator.DisposeAsync().AsTask();
+        try { Assert.False(dispose.IsCompleted); }
+        finally { fixture.Termination.ReleaseCompletion(); }
+        await dispose;
+    }
+
+    [Fact]
+    public async Task CoordinatorPublishesOnlyRealWindowTransitionsAndMonitoringState()
+    {
+        var fixture = new Fixture();
+        var events = new List<ActivityEvent>();
+        fixture.Coordinator.ActivityOccurred += (_, activity) => events.Add(activity);
+        await fixture.StartAsync();
+        Assert.True(fixture.Coordinator.IsMonitoring);
+        Assert.DoesNotContain(events, e => e.Type == ActivityEventType.ProcessDetected);
+
+        var id = Identity(133);
+        await fixture.TrackAsync(id, [MainWindow(id.Pid, 1)]);
+        Assert.Equal(1, fixture.Coordinator.TrackedProcessCount);
+        await fixture.Coordinator.ObserveWindowsAsync(id, []);
+        Assert.Contains(events, e => e.Type == ActivityEventType.WindowOpened);
+        Assert.Contains(events, e => e.Type == ActivityEventType.WindowClosed);
+        await fixture.Coordinator.StopAsync();
+        Assert.False(fixture.Coordinator.IsMonitoring);
+        Assert.Equal(0, fixture.Coordinator.TrackedProcessCount);
+    }
+
     private sealed class Fixture
     {
         public FakeTimeProvider Time { get; } = new(Now);
@@ -172,8 +279,9 @@ public sealed class GracePeriodCoordinatorTests
     private sealed class FakeTermination : ISafeTerminationService
     {
         private readonly TaskCompletionSource _called = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        private TaskCompletionSource? _completion;
         public List<ProcessIdentity> Calls { get; } = [];
-        public ValueTask<TerminationDecision> TryTerminateAsync(ProcessIdentity expected, TerminationOptions options,
+        public async ValueTask<TerminationDecision> TryTerminateAsync(ProcessIdentity expected, TerminationOptions options,
             bool hadEligibleWindow, bool stateChangedDuringGrace, CancellationToken cancellationToken)
         {
             Assert.True(hadEligibleWindow);
@@ -181,9 +289,12 @@ public sealed class GracePeriodCoordinatorTests
             cancellationToken.ThrowIfCancellationRequested();
             Calls.Add(expected);
             _called.TrySetResult();
-            return ValueTask.FromResult(TerminationDecision.Permit());
+            if (_completion is not null) await _completion.Task.ConfigureAwait(false);
+            return TerminationDecision.Permit();
         }
         public Task WaitForCallAsync() => _called.Task.WaitAsync(TimeSpan.FromSeconds(2));
+        public void BlockCompletion() => _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
+        public void ReleaseCompletion() => _completion?.TrySetResult();
     }
 
     private sealed class FakeLog : IActivityLog

@@ -52,7 +52,7 @@ public sealed class JsonUserSettingsStore(string? filePath = null) : IUserSettin
     {
         Language = settings.Language is "ru" or "en" ? settings.Language : "en",
         Theme = settings.Theme is "light" or "dark" ? settings.Theme : "dark",
-        GracePeriodSeconds = Math.Clamp(settings.GracePeriodSeconds, 1, 300),
+        GracePeriodSeconds = Math.Clamp(settings.GracePeriodSeconds, 3, 300),
         MaxLogBytes = Math.Clamp(settings.MaxLogBytes, 64 * 1024, 100 * 1024 * 1024),
         CloseBehavior = settings.CloseBehavior is "tray" or "exit" or "ask" ? settings.CloseBehavior : "ask",
         ProtectedExecutablePaths = settings.ProtectedExecutablePaths?.Where(p => !string.IsNullOrWhiteSpace(p)).Distinct(StringComparer.OrdinalIgnoreCase).ToArray() ?? Array.Empty<string>()

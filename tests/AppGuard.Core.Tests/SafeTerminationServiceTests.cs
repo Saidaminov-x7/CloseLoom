@@ -26,6 +26,8 @@ public sealed class SafeTerminationServiceTests
         var outcome = await fixture.Service.TryTerminateAsync(Identity, new(false, true, 9), true, false, CancellationToken.None);
         Assert.True(outcome.Allowed);
         Assert.Equal(1, fixture.Terminator.Calls);
+        var terminatedEvent = Assert.Single(fixture.Log.Events, e => e.Type == ActivityEventType.ProcessTerminated);
+        Assert.Equal("Process exit confirmed", terminatedEvent.Result);
     }
 
     [Fact]
@@ -35,6 +37,16 @@ public sealed class SafeTerminationServiceTests
         var outcome = await fixture.Service.TryTerminateAsync(Identity, new(false, true, 9), true, true, CancellationToken.None);
         Assert.False(outcome.Allowed);
         Assert.Equal(0, fixture.Terminator.Calls);
+    }
+
+    [Fact]
+    public async Task FailedTerminationRequestNeverEmitsProcessTerminated()
+    {
+        var fixture = new Fixture();
+        fixture.Terminator.Failure = new InvalidOperationException("test failure");
+        var outcome = await fixture.Service.TryTerminateAsync(Identity, new(false, true, 9), true, false, CancellationToken.None);
+        Assert.False(outcome.Allowed);
+        Assert.DoesNotContain(fixture.Log.Events, e => e.Type == ActivityEventType.ProcessTerminated);
     }
 
     private sealed class Fixture
@@ -53,12 +65,14 @@ public sealed class SafeTerminationServiceTests
     {
         public ValueTask<MonitoredApplication?> FindExactExecutableAsync(string path, CancellationToken cancellationToken) =>
             ValueTask.FromResult<MonitoredApplication?>(string.Equals(path, identity.ExecutablePath, StringComparison.OrdinalIgnoreCase)
-                ? new MonitoredApplication(Guid.NewGuid(), "Tool", identity.ExecutablePath)
+                ? new MonitoredApplication(Guid.NewGuid(), "Tool", identity.ExecutablePath, AllowBackgroundTerminationConsent: true)
                 : null);
     }
     private sealed class ProcessStub(ProcessIdentity identity) : IProcessCatalog
     {
         public ValueTask<ProcessSnapshot?> GetSnapshotAsync(int pid, CancellationToken cancellationToken) => ValueTask.FromResult<ProcessSnapshot?>(pid == identity.Pid ? new(identity, false) : null);
+        public ValueTask<IReadOnlyList<ProcessSnapshot>> GetCurrentSessionProcessesAsync(CancellationToken cancellationToken) =>
+            ValueTask.FromResult<IReadOnlyList<ProcessSnapshot>>([new(identity, false)]);
     }
     private sealed class WindowStub : IWindowMonitor
     {
@@ -67,7 +81,13 @@ public sealed class SafeTerminationServiceTests
     private sealed class FakeTerminator : IProcessTerminator
     {
         public int Calls { get; private set; }
-        public ValueTask TerminateAsync(ProcessIdentity identity, CancellationToken cancellationToken) { Calls++; return ValueTask.CompletedTask; }
+        public Exception? Failure { get; set; }
+        public ValueTask TerminateAsync(ProcessIdentity identity, CancellationToken cancellationToken)
+        {
+            Calls++;
+            if (Failure is not null) throw Failure;
+            return ValueTask.CompletedTask;
+        }
     }
     private sealed class FakeLog : IActivityLog
     {

@@ -23,7 +23,7 @@ public sealed class JsonUserSettingsStoreTests : IDisposable
         await store.SaveAsync(new UserSettings { DryRun = false, GracePeriodSeconds = 0, Theme = "bad", Language = "ru" });
         var loaded = await store.LoadAsync();
         Assert.False(loaded.DryRun);
-        Assert.Equal(1, loaded.GracePeriodSeconds);
+        Assert.Equal(3, loaded.GracePeriodSeconds);
         Assert.Equal("dark", loaded.Theme);
         Assert.Equal("ru", loaded.Language);
     }

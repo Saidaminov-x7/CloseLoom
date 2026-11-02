@@ -55,5 +55,13 @@ public sealed class TerminationPolicyTests
     [Fact] public void MinimizedWindowIsStillAnOpenWindow() => Assert.False(Decide(windows: [new(4001, 4, true, true, true)]).Allowed);
     [Fact] public void OwnedAuxiliaryDialogBlocksTermination() => Assert.False(Decide(windows: [new(4001, 4, true, false, false)]).Allowed);
     [Fact] public void ProtectedPathBlocksEvenAllowlistedApplication() => Assert.False(Decide(options: Options(protectedPaths: new HashSet<string>(StringComparer.OrdinalIgnoreCase) { Identity.ExecutablePath })).Allowed);
-    [Fact] public void BackgroundCapableAppRequiresExplicitConsent() => Assert.False(Decide(app: App(allow: false, background: true)).Allowed);
+    [Fact]
+    public void BackgroundCapableAppRequiresExplicitConsentForActiveMode() =>
+        Assert.False(Decide(app: App(allow: false, background: true), options: Options(dryRun: false)).Allowed);
+    [Fact]
+    public void AnyRealTerminationRequiresExplicitPerApplicationConsentEvenWhenBackgroundBehaviorIsUnknown() =>
+        Assert.Contains("consent", Decide(app: new MonitoredApplication(Guid.NewGuid(), "Editor", Identity.ExecutablePath), options: Options(dryRun: false)).Reason);
+    [Fact]
+    public void DryRunMayShowEligibleCandidateWithoutConsentButNeverTerminates() =>
+        Assert.True(Decide(app: new MonitoredApplication(Guid.NewGuid(), "Editor", Identity.ExecutablePath)).Allowed);
 }
