@@ -1,6 +1,6 @@
-# AppGuard
+# CloseLoom
 
-AppGuard is a Windows 11 WPF application under development for observing applications explicitly selected by the user. It is designed to notice the disappearance of an observed user window and recheck a process after a grace period. **Only Dry Run is available. Active termination is deliberately disabled.**
+CloseLoom is a Windows 11 WPF application under development for observing applications explicitly selected by the user. It is designed to notice the disappearance of an observed user window and recheck a process after a grace period. **Only Dry Run is available. Active termination is deliberately disabled.**
 
 ## Current status
 
@@ -19,19 +19,19 @@ Application names, paths and process identifiers may be sensitive. Settings and 
 Windows 11, .NET 10 SDK, and access to NuGet for restore are required:
 
 ```powershell
-dotnet restore AppGuard.sln
-dotnet build AppGuard.sln --configuration Release --no-restore -warnaserror
-dotnet test AppGuard.sln --configuration Release --no-build
-dotnet format AppGuard.sln --verify-no-changes --no-restore
+dotnet restore CloseLoom.sln
+dotnet build CloseLoom.sln --configuration Release --no-restore -warnaserror
+dotnet test CloseLoom.sln --configuration Release --no-build
+dotnet format CloseLoom.sln --verify-no-changes --no-restore
 ```
 
-For future manual use, after reviewing the limitations, run `dotnet run --project src/AppGuard.Desktop`. The WPF application was launched temporarily for authorized UI tests and exited; no installation or autostart was configured. No installer, service, autostart entry or scheduled task is created by this repository.
+For future manual use, after reviewing the limitations, run `dotnet run --project src/CloseLoom.Desktop`. The WPF application was launched temporarily for authorized UI tests and exited; no installation or autostart was configured. No installer, service, autostart entry or scheduled task is created by this repository.
 
 ## Architecture and documentation
 
-- `src/AppGuard.Core` — identities, decision policy and grace-period state.
-- `src/AppGuard.Infrastructure` — Windows adapters, event observation, and JSON persistence.
-- `src/AppGuard.Desktop` — WPF user interface and dependency injection.
+- `src/CloseLoom.Core` — identities, decision policy and grace-period state.
+- `src/CloseLoom.Infrastructure` — Windows adapters, event observation, and JSON persistence.
+- `src/CloseLoom.Desktop` — WPF user interface and dependency injection.
 - `tests` — unit tests using fake process and window dependencies.
 - `docs` — [architecture](docs/ARCHITECTURE.md), [security](docs/SECURITY.md), [testing](docs/TESTING.md), and [user guide](docs/USER_GUIDE.md).
 
@@ -43,4 +43,8 @@ Review and test the Windows adapters and complete the UI under explicit authoriz
 
 ## Verification on 2026-11-02
 
-Release build: PASS (0 errors, 0 warnings). Unit tests: **63/63 PASS**. Isolated live Windows integration: **38/38 PASS** (including one-shot decision stability). WPF: five navigation controls, monitoring start/stop, and confirmation-based exit PASS. See [the real Windows test report](docs/REAL_WINDOWS_TEST_REPORT_2026-11-02.md) and [repeatable live test sources](tests/live-windows/README.md). Real forced termination, tray menu actions and remote GitHub Actions are NOT TESTED.
+Release build: PASS (0 errors, 0 warnings). Unit tests: **63/63 PASS**. Independently verified on an interactive Windows desktop: live WinEvent Dry Run integration **38/38 PASS** with a disposable fixture and no process terminated; the desktop EXE and extracted self-contained win-x64 ZIP both launched and exited cleanly (code 0). In the restricted Codex sandbox, 11 of 38 checks failed; this environment-specific result is not a production pass. Clean-room restore/build/test also passed. WPF: five navigation controls, monitoring start/stop, and confirmation-based exit PASS. See [the real Windows test report](docs/REAL_WINDOWS_TEST_REPORT_2026-11-02.md) and [repeatable live test sources](tests/live-windows/README.md). Real forced termination, tray menu actions and remote GitHub Actions are NOT TESTED.
+
+## Portable Windows x64 preview
+
+Framework-dependent builds need .NET 10 Windows Desktop Runtime. For a self-contained ZIP, run [scripts/publish-win-x64.ps1](scripts/publish-win-x64.ps1). This is an unsigned Dry Run preview and is not verified on other machines; read [PORTABILITY.md](docs/PORTABILITY.md).

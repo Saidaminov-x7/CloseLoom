@@ -1,13 +1,13 @@
 using System.Diagnostics;
 using System.Text.Json;
-using AppGuard.Core.Models;
-using AppGuard.Core.Services;
-using AppGuard.Core.Policies;
-using AppGuard.Infrastructure.Persistence;
-using AppGuard.Infrastructure.Windows;
-using AppGuard.Infrastructure.Logging;
-using AppGuard.Infrastructure.Monitoring;
-using AppGuard.Core.Interfaces;
+using CloseLoom.Core.Models;
+using CloseLoom.Core.Services;
+using CloseLoom.Core.Policies;
+using CloseLoom.Infrastructure.Persistence;
+using CloseLoom.Infrastructure.Windows;
+using CloseLoom.Infrastructure.Logging;
+using CloseLoom.Infrastructure.Monitoring;
+using CloseLoom.Core.Interfaces;
 
 var dir = Path.GetFullPath(args[0]);
 var fixture = Path.GetFullPath(args[1]);
@@ -42,7 +42,7 @@ async Task Assert(string name, Func<Task<bool>> predicate, int timeoutMs=6000)
  checks.Add(status);
  if(!ok)failures.Add(name);
 }
-async Task<bool> HasEvent(ActivityEventType type, Func<AppGuard.Core.Models.ActivityEvent,bool>? filter=null)
+async Task<bool> HasEvent(ActivityEventType type, Func<CloseLoom.Core.Models.ActivityEvent,bool>? filter=null)
 {
  var evs=await logs.ReadAsync();
  return evs.Any(e=>e.Type==type && (filter==null || filter(e)));

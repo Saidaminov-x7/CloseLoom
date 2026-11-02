@@ -10,7 +10,7 @@ internal static class Program
         Application.SetCompatibleTextRenderingDefault(false);
         var controlPath = args[0];
         string lastCommand="";
-        Form? first = Make("AppGuard LIVE TEST - Main", 300, 140);
+        Form? first = Make("CloseLoom LIVE TEST - Main", 300, 140);
         Form? second = null;
         var ctx = new ApplicationContext();
         first.Show();
@@ -30,10 +30,10 @@ internal static class Program
                 {
                     case "MINIMIZE": if(first!=null)first.WindowState=FormWindowState.Minimized;break;
                     case "RESTORE": if(first!=null){first.Show();first.WindowState=FormWindowState.Normal;}break;
-                    case "SHOW_SECOND": second??=Make("AppGuard LIVE TEST - Second",460,260);second.Show();break;
+                    case "SHOW_SECOND": second??=Make("CloseLoom LIVE TEST - Second",460,260);second.Show();break;
                     case "CLOSE_SECOND": second?.Close();second=null;break;
                     case "CLOSE_MAIN": first?.Close();first=null;break;
-                    case "REOPEN_MAIN": first??=Make("AppGuard LIVE TEST - Reopened",300,140);first.Show();break;
+                    case "REOPEN_MAIN": first??=Make("CloseLoom LIVE TEST - Reopened",300,140);first.Show();break;
                     case "HIDE_MAIN": first?.Hide();break;
                     case "SHOW_MAIN": first?.Show();break;
                     case "EXIT":

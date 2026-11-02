@@ -8,11 +8,11 @@ The Release build with warnings-as-errors passed with zero errors and warnings. 
 
 ## Interactive Windows tests (explicit opt-in)
 
-Authorized tests ran the real WinEvent hooks and monitor with a disposable WinForms process, only in Dry Run. Result **38/38 PASS**. Tested process discovery, two windows, minimizing, final-window close, cancellation on reopen, 3-second grace, one-shot decision after 7.5 seconds, exit detection, pause/resume, stop/restart.
+Independently verified outside the Codex sandbox on an interactive Windows desktop, authorized tests ran the real WinEvent hooks and monitor with a disposable WinForms process, only in Dry Run. Result **38/38 PASS**. Tested process discovery, two windows, minimizing, final-window close, cancellation on reopen, 3-second grace, one-shot decision after 7.5 seconds, exit detection, pause/resume, stop/restart.
 
-Reproducible source code and manual instructions: [tests/live-windows](../tests/live-windows/README.md). These tests are deliberately excluded from normal CI because an interactive Windows desktop is required.
+Reproducible source code and manual instructions: [tests/live-windows](../tests/live-windows/README.md). In the restricted Codex sandbox, 11 of 38 checks failed; this environment-specific result is not a production pass. These tests are deliberately excluded from normal CI because an interactive Windows desktop is required.
 
-Separate real WPF smoke tests exercised the main window, all five navigation sections, monitoring Start/Stop with an explicitly allowed disposable EXE, and closing by clicking Yes in the exit confirmation dialog. The GUI test allowlist was removed after the checks. The WPF process exited normally, code 0.
+Separate real WPF smoke tests exercised the main window, all five navigation sections, monitoring Start/Stop with an explicitly allowed disposable EXE, and closing by clicking Yes in the exit confirmation dialog. The GUI test allowlist was removed after the checks. The desktop EXE exited normally, code 0. An extracted self-contained win-x64 portable ZIP also launched a real WPF window and exited cleanly with code 0. Compatibility with other PCs remains unverified. Clean-room restore, build and test passed.
 
 ## Unverified functionality and safety boundaries
 

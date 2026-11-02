@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="../../../src/AppGuard.Core/AppGuard.Core.csproj" />
-    <ProjectReference Include="../../../src/AppGuard.Infrastructure/AppGuard.Infrastructure.csproj" />
+    <ProjectReference Include="../../../src/CloseLoom.Core/CloseLoom.Core.csproj" />
+    <ProjectReference Include="../../../src/CloseLoom.Infrastructure/CloseLoom.Infrastructure.csproj" />
   </ItemGroup>
 </Project>

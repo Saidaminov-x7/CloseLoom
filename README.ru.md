@@ -1,6 +1,6 @@
-# AppGuard
+# CloseLoom
 
-AppGuard — разрабатываемое приложение Windows 11 на WPF для наблюдения за программами, явно выбранными пользователем. Доступен только **Dry Run**: компонент реального завершения процессов отказывает во всех запросах.
+CloseLoom — разрабатываемое приложение Windows 11 на WPF для наблюдения за программами, явно выбранными пользователем. Доступен только **Dry Run**: компонент реального завершения процессов отказывает во всех запросах.
 
 В проекте реализованы код обнаружения процессов текущей сессии, обработка событий окон Windows, защитная задержка, локальные настройки, список приложений и журнал, а также интерфейс и управление через трей. 2 ноября 2026 года на Windows выполнены реальные интеграционные испытания мониторинга (38/38 PASS) с отдельным тестовым приложением в режиме Dry Run. WPF-окно, пять разделов, кнопки запуска/остановки мониторинга и подтверждённый выход проверены. Взаимодействие с меню трея и настоящее принудительное завершение программ не проверены. Модульные тесты сами по себе не доказывают безопасность работы в Windows. Не полагайтесь на эту версию для защиты данных.
 
@@ -9,13 +9,13 @@ AppGuard — разрабатываемое приложение Windows 11 на
 Для сборки нужны Windows 11 и .NET 10 SDK:
 
 ```powershell
-dotnet restore AppGuard.sln
-dotnet build AppGuard.sln --configuration Release --no-restore -warnaserror
-dotnet test AppGuard.sln --configuration Release --no-build
-dotnet format AppGuard.sln --verify-no-changes --no-restore
+dotnet restore CloseLoom.sln
+dotnet build CloseLoom.sln --configuration Release --no-restore -warnaserror
+dotnet test CloseLoom.sln --configuration Release --no-build
+dotnet format CloseLoom.sln --verify-no-changes --no-restore
 ```
 
-Для будущого ручного запуска после изучения ограничений: `dotnet run --project src/AppGuard.Desktop`. Подробности — в [английском README](README.md), [документации безопасности](docs/SECURITY.md) и [истории изменений](CHANGELOG.md). Лицензия — [MIT](LICENSE).
+Для будущого ручного запуска после изучения ограничений: `dotnet run --project src/CloseLoom.Desktop`. Подробности — в [английском README](README.md), [документации безопасности](docs/SECURITY.md) и [истории изменений](CHANGELOG.md). Лицензия — [MIT](LICENSE).
 
 ## Результаты испытаний (02.11.2026)
 
@@ -26,3 +26,9 @@ dotnet format AppGuard.sln --verify-no-changes --no-restore
 - Системный трей (меню), Active-завершение настоящих программ, GitHub Actions — NOT TESTED / BLOCKED.
 
 Отчёт: [docs/REAL_WINDOWS_TEST_REPORT_2026-11-02.md](docs/REAL_WINDOWS_TEST_REPORT_2026-11-02.md). Повторяемый интеграционный стенд: [tests/live-windows](tests/live-windows/README.md).
+
+Независимая проверка на интерактивном рабочем столе Windows: EXE и распакованный автономный win-x64 ZIP открыли WPF-окно и завершились с кодом 0; все 38 сценариев WinEvent Dry Run прошли без завершения процессов. В ограниченной песочнице Codex не прошли 11 из 38 сценариев; это результат конкретной среды, а не подтверждение работоспособности в production. Restore/build/test в чистом окружении прошли. Совместимость с другими компьютерами не проверена.
+
+## Portable-сборка Windows x64
+
+Обычной сборке нужен Windows Desktop Runtime .NET 10. Автономный ZIP со встроенным .NET можно создать командой из [scripts/publish-win-x64.ps1](scripts/publish-win-x64.ps1). Это неподписанная тестовая версия только для Dry Run; совместимость с другими компьютерами не подтверждена. См. [PORTABILITY.md](docs/PORTABILITY.md).

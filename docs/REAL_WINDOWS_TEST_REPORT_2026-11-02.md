@@ -1,12 +1,16 @@
-# AppGuard — Real Windows 11 integration report
+# CloseLoom — Real Windows 11 integration report
 
-Date: **2026-11-02**. Scope: locally authorized interactive testing with a disposable test application. All monitoring operates in **Dry Run**.
+Date: **2026-11-02**. Scope: independently verified outside the Codex sandbox, locally authorized interactive testing with a disposable test application. All monitoring operates in **Dry Run**.
 
 ## Summary
 
 | Scenario | Result | Details |
 |---|---|---|
 | Release compilation, warnings-as-errors | PASS | No warnings or errors |
+| Clean-room restore, build and test | PASS | Independently verified |
+| Extracted self-contained win-x64 ZIP | PASS | Real WPF window launched and exited cleanly, code 0 |
+| Restricted Codex sandbox live integration | FAIL | 11 of 38 checks failed in this environment; not a production pass |
+| Compatibility with other PCs | NOT TESTED | No cross-machine verification |
 | Core unit tests | PASS | 43/43 |
 | Infrastructure unit tests | PASS | 20/20 |
 | Live Windows integration using disposable WinForms windows | PASS | 38/38 |
@@ -23,7 +27,7 @@ Date: **2026-11-02**. Scope: locally authorized interactive testing with a dispo
 | System tray menu | NOT TESTED | No direct interaction verification |
 | Sleep/resume, security software and production applications | NOT TESTED | Outside the safe fixture scope |
 | Remote GitHub Actions | NOT TESTED | No remote workflow result |
-| Public GitHub push | BLOCKED | GitHub CLI authorization unavailable |
+| Public GitHub push | NOT TESTED | Not authorized for this audit |
 
 ## Defects corrected
 
@@ -34,8 +38,8 @@ Date: **2026-11-02**. Scope: locally authorized interactive testing with a dispo
 
 ## Safety, cleanup and reproducibility
 
-No ordinary user processes were force-terminated; no app autostart, system service or scheduled task was created; and Windows security settings were left unchanged. AppGuard executable was run only for temporary GUI tests. The temporary allowlist was removed and no resident AppGuard/test processes remained after checks.
+No processes were terminated during the live Dry Run fixture tests; no app autostart, system service or scheduled task was created; and Windows security settings were left unchanged. CloseLoom executable was run only for temporary GUI tests. The temporary allowlist was removed and no resident CloseLoom/test processes remained after checks.
 
 Repeatable live test source: [tests/live-windows](../tests/live-windows/README.md). Raw logs and fixture configuration are stored only in temporary local paths outside the repository. Do not publish raw logs because they may contain paths and PIDs.
 
-**Verdict:** The listed **Dry Run** tests PASS. Real Active-mode termination is still blocked and AppGuard is not certified or ready to force-close production applications.
+**Verdict:** The listed **Dry Run** tests PASS. Real Active-mode termination is still blocked and CloseLoom is not certified or ready to force-close production applications.

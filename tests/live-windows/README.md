@@ -1,13 +1,13 @@
 # Live Windows integration tests (explicit opt-in)
 
 These executable tests use real Windows 11 WinEvent hooks and a disposable WinForms fixture.
-They exercise the AppGuard monitoring components in Dry Run only: minimization,
+They exercise the CloseLoom monitoring components in Dry Run only: minimization,
 two open windows, final-window close, cancellation on reopen, the three-second grace
 period, one-shot decision after 7.5 seconds, process exit, pause/resume, stop/restart,
 and local JSON event logs.
 
-Safety: This does not run AppGuard.Desktop.exe, enable real process termination,
-install AppGuard or write user allowlists. It creates only an isolated test fixture
+Safety: This does not run CloseLoom.Desktop.exe, enable real process termination,
+install CloseLoom or write user allowlists. It creates only an isolated test fixture
 process launched by the test runner. The runner closes the fixture after testing.
 Tests require an interactive Windows desktop session.
 
@@ -19,7 +19,7 @@ Run from the repository root in PowerShell:
     dotnet build tests/live-windows/Runner/LiveRunner.csproj -c Release
     $fixture = (Resolve-Path tests/live-windows/Fixture/bin/Release/net10.0-windows/LiveFixture.exe).Path
     $runner = (Resolve-Path tests/live-windows/Runner/bin/Release/net10.0-windows/LiveRunner.exe).Path
-    $report = Join-Path $env:TEMP ("AppGuard-Live-" + [guid]::NewGuid().ToString("N"))
+    $report = Join-Path $env:TEMP ("CloseLoom-Live-" + [guid]::NewGuid().ToString("N"))
     & $runner $report $fixture
     $LASTEXITCODE
 
